@@ -129,7 +129,7 @@ def on_upload():
 
 def play_fixed_mp3():
     # Set the file path
-    file_path = r"C:\Users\s_den\OneDrive\Desktop\Soundboard\output.mp3"
+    file_path = r"C:\Users\USER\OneDrive\Desktop\Soundboard\output.mp3"
 
     # Load the MP3 file
     audio = AudioSegment.from_mp3(file_path)
