@@ -7,7 +7,7 @@ This Python script uses the ElevenLabs API to convert text to speech. It provide
 - Text to speech conversion using the ElevenLabs API
 - GUI for user interaction
 - Option to play the output over speakers or a virtual audio cable
-- Option to upload a voice
+- Option to upload an audio file to create a voice
 - Progress bar to indicate the status of the conversion
 
 ## Dependencies
