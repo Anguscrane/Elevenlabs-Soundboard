@@ -1,3 +1,4 @@
+
 import requests
 from pydub import AudioSegment
 import io
@@ -12,6 +13,10 @@ import sounddevice as sd
 import numpy as np
 import pyaudio
 import time
+import threading
+
+# Replace 'your_api_key' with your actual API key
+your_api_key = "Your API Key Here"
 
 def get_user_voices(api_key):
     url = "https://api.elevenlabs.io/v1/voices"
@@ -45,7 +50,8 @@ def add_voice(api_key, name, description, labels, audio_files):
     else:
         return None
 
-def download_mp3(api_key, user_input_text, chosen_user_voice_id, chosen_model_id, result_label, use_custom_path):
+
+def download_mp3(api_key, user_input_text, chosen_user_voice_id, chosen_model_id, result_label):
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{chosen_user_voice_id}"
 
     headers = {
@@ -63,43 +69,47 @@ def download_mp3(api_key, user_input_text, chosen_user_voice_id, chosen_model_id
         }
     }
 
-    response = requests.post(url, json=data, headers=headers)
+    # Make the progress bar visible and start it
+    progress.pack()
+    progress.start()
 
-    if response.status_code == 200:
-        if use_custom_path:
-            save_path = os.path.join(os.environ['USERPROFILE'] if 'USERPROFILE' in os.environ else os.environ['HOME'], "Downloads", "Soundboard", "output.mp3")
-        else:
-            save_path = os.path.join(os.environ['USERPROFILE'] if 'USERPROFILE' in os.environ else os.environ['HOME'], "Downloads",
-                                     "output at " + datetime.datetime.now().strftime("%H") + "-" +
-                                     datetime.datetime.now().strftime("%M") + "-" +
-                                     datetime.datetime.now().strftime("%S") + ".mp3")
+    def request():
+        response = requests.post(url, json=data, headers=headers)
 
-        with open(save_path, 'wb') as f:
-            f.write(response.content)
+        # Stop the progress bar and hide it
+        progress.stop()
+        progress.pack_forget()
 
-        result_label.config(text="MP3 file downloaded successfully.")
-    else:
-        result_label.config(text=f"Error: {response.status_code}, {response.text}")
+        if response.status_code == 200:
+                file_path = os.path.join(os.environ['USERPROFILE'] if 'USERPROFILE' in os.environ else os.environ['HOME'], "Downloads", "output.mp3")
+                #save_path = os.path.join(os.environ['USERPROFILE'] if 'USERPROFILE' in os.environ else os.environ['HOME'], "Downloads",
+                                        #"output at " + datetime.datetime.now().strftime("%H") + "-" +
+                                         #datetime.datetime.now().strftime("%M") + "-" +
+                                         #datetime.datetime.now().strftime("%S") + ".mp3")
+
+                with open(file_path, 'wb') as f:
+                    f.write(response.content)
+
+                result_label.config(text="MP3 file downloaded successfully.")
+
+        # Check what to play over
+        if play_over_microphone.get() & play_over_speakers.get():
+            play_fixed_mp3("BOTH")
+        elif play_over_microphone.get():
+            play_fixed_mp3("CABLE")
+        # Else, check the value of play_over_speakers
+        elif play_over_speakers.get():
+            play_fixed_mp3("HEADPHONES")
+        # Else, do nothing (or show an error message)
+
+    # Run the request in a separate thread
+    threading.Thread(target=request).start()
 def on_submit():
-    user_input_text = text_entry.get()
+    # Get the user input text
+    user_input_text = text_entry.get('1.0', 'end').strip()
     chosen_user_voice_id = your_voices[voices_combobox.current()]['voice_id']
     chosen_model_id = available_models[models_combobox.current()]["model_id"]
-    download_mp3(your_api_key, user_input_text, chosen_user_voice_id, chosen_model_id, result_label, use_custom_path.get())
-
-    # Check the value of use_custom_path
-    if use_custom_path.get() & play_over_speakers.get():
-        play_fixed_mp3("BOTH")
-    elif use_custom_path.get():
-        play_fixed_mp3("CABLE")
-    # Else, check the value of play_over_speakers
-    elif play_over_speakers.get():
-        play_fixed_mp3("HEADPHONES")
-    # Else, do nothing (or show an error message)
-    else:
-        pass
-
-# Remove the following line, as it plays the audio outside the button click event
-# play_fixed_mp3()
+    download_mp3(your_api_key, user_input_text, chosen_user_voice_id, chosen_model_id, result_label)
 
 def on_upload():
     file_paths = filedialog.askopenfilenames(
@@ -136,8 +146,8 @@ def on_upload():
         ok_button.pack(pady=5)
 
 def play_fixed_mp3(output_device):
-    # Set the file path
-    file_path = os.path.join(os.environ['USERPROFILE'] if 'USERPROFILE' in os.environ else os.environ['HOME'], "Downloads", "Soundboard", "output.mp3")
+    # Set the file path based on the output_device parameter
+    file_path = os.path.join(os.environ['USERPROFILE'] if 'USERPROFILE' in os.environ else os.environ['HOME'], "Downloads", "output.mp3")
 
     # Load the MP3 file
     audio = AudioSegment.from_mp3(file_path)
@@ -160,8 +170,18 @@ def play_fixed_mp3(output_device):
     # Wait for the playback to finish (adjust the sleep duration as needed)
     time.sleep(len(audio) / 1000)
 
-# Replace 'your_api_key' with your actual API key
-your_api_key = "YOUR_API_KEY"
+# Function to refresh the voices and models
+def refresh():
+    global your_voices, voice_options, available_models, model_options
+    your_voices = get_user_voices(your_api_key)
+    voice_options = [voice['name'] for voice in your_voices]
+    voices_combobox['values'] = voice_options
+    voices_combobox.current(0)
+
+    available_models = get_models(your_api_key)
+    model_options = [f"{model['name']} - {model['description']}" for model in available_models]
+    models_combobox['values'] = model_options
+    models_combobox.current(0)
 
 # Get voices associated with your account
 your_voices = get_user_voices(your_api_key)
@@ -177,8 +197,8 @@ window.title("Text to Speech Converter")
 
 # Create and place widgets
 tk.Label(window, text="Enter the text you want to convert:").pack(pady=5)
-text_entry = tk.Entry(window, width=50)
-text_entry.pack(pady=5)
+text_entry = tk.Text(window, width=50, height=10)
+text_entry.pack(pady=5, expand=True, fill=tk.BOTH)
 
 tk.Label(window, text="Choose a voice:").pack(pady=5)
 max_voice_option_length = max(len(option) for option in voice_options)
@@ -193,8 +213,8 @@ models_combobox.pack(pady=5)
 models_combobox.current(0)
 
 # Add a Checkbutton for custom save path
-use_custom_path = tk.BooleanVar()
-custom_path_checkbox = tk.Checkbutton(window, text="Play on soundboard", variable=use_custom_path)
+play_over_microphone = tk.BooleanVar()
+custom_path_checkbox = tk.Checkbutton(window, text="Play on soundboard", variable=play_over_microphone)
 custom_path_checkbox.pack(pady=5)
 
 play_over_speakers = tk.BooleanVar()
@@ -209,6 +229,25 @@ upload_button.pack(pady=5)
 
 result_label = tk.Label(window, text="")
 result_label.pack(pady=5)
+
+# Add a Refresh button
+refresh_button = tk.Button(window, text="Refresh", command=refresh)
+refresh_button.pack(pady=5)
+
+# Add a Progress bar
+progress = ttk.Progressbar(window, length=200, mode='indeterminate')
+progress.pack(pady=5)
+
+# Hide the progress bar initially
+progress.pack_forget()
+
+# Make the window resizable
+window.resizable(True, True)
+
+# Configure the grid to expand with the window
+for i in range(10):  # Adjust as needed
+    window.grid_columnconfigure(i, weight=1)
+    window.grid_rowconfigure(i, weight=1)
 
 # Start the Tkinter event loop
 window.mainloop()
