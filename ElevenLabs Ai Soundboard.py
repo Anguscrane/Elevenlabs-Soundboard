@@ -16,7 +16,7 @@ import time
 import threading
 
 # Replace 'your_api_key' with your actual API key
-your_api_key = "Your API Key Here"
+your_api_key = "your key here"
 
 def get_user_voices(api_key):
     url = "https://api.elevenlabs.io/v1/voices"
@@ -214,7 +214,7 @@ models_combobox.current(0)
 
 # Add a Checkbutton for custom save path
 play_over_microphone = tk.BooleanVar()
-custom_path_checkbox = tk.Checkbutton(window, text="Play on soundboard", variable=play_over_microphone)
+custom_path_checkbox = tk.Checkbutton(window, text="Play over microphone", variable=play_over_microphone)
 custom_path_checkbox.pack(pady=5)
 
 play_over_speakers = tk.BooleanVar()
