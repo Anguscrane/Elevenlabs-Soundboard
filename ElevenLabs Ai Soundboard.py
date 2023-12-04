@@ -13,9 +13,6 @@ import numpy as np
 import pyaudio
 import time
 
-home_dir = os.path.expanduser("~")
-print(home_dir)
-
 def get_user_voices(api_key):
     url = "https://api.elevenlabs.io/v1/voices"
     headers = {"xi-api-key": api_key}
@@ -89,9 +86,17 @@ def on_submit():
     chosen_model_id = available_models[models_combobox.current()]["model_id"]
     download_mp3(your_api_key, user_input_text, chosen_user_voice_id, chosen_model_id, result_label, use_custom_path.get())
 
-    if use_custom_path.get():
-        # Move play_fixed_mp3() inside the if block to play the audio only when using custom path
-        play_fixed_mp3()
+    # Check the value of use_custom_path
+    if use_custom_path.get() & play_over_speakers.get():
+        play_fixed_mp3("BOTH")
+    elif use_custom_path.get():
+        play_fixed_mp3("CABLE")
+    # Else, check the value of play_over_speakers
+    elif play_over_speakers.get():
+        play_fixed_mp3("HEADPHONES")
+    # Else, do nothing (or show an error message)
+    else:
+        pass
 
 # Remove the following line, as it plays the audio outside the button click event
 # play_fixed_mp3()
@@ -130,7 +135,7 @@ def on_upload():
         ok_button = tk.Button(input_window, text="OK", command=on_ok)
         ok_button.pack(pady=5)
 
-def play_fixed_mp3():
+def play_fixed_mp3(output_device):
     # Set the file path
     file_path = os.path.join(os.environ['USERPROFILE'] if 'USERPROFILE' in os.environ else os.environ['HOME'], "Downloads", "Soundboard", "output.mp3")
 
@@ -140,8 +145,17 @@ def play_fixed_mp3():
     # Convert to numpy array
     samples = np.array(audio.get_array_of_samples())
 
-    # Play the audio using sounddevice to VB-Cable virtual device
-    sd.play(samples, samplerate=44100, device="CABLE Input (VB-Audio Virtual Cable),  Windows DirectSound", blocking=True,)
+    # Set the device based on the output_device parameter
+    if output_device == "BOTH":
+        # Play the audio over both the CABLE input and the default speakers
+        sd.play(samples, samplerate=44100, device="CABLE Input (VB-Audio Virtual Cable),  Windows DirectSound", blocking=False)
+        sd.play(samples, samplerate=44100, device=sd.default.device, blocking=False)
+    elif output_device == "CABLE":
+        device = "CABLE Input (VB-Audio Virtual Cable),  Windows DirectSound"
+        sd.play(samples, samplerate=44100, device=device, blocking=True)
+    elif output_device == "HEADPHONES":
+        device = sd.default.device  # Set to default speakers
+        sd.play(samples, samplerate=44100, device=device, blocking=True)
 
     # Wait for the playback to finish (adjust the sleep duration as needed)
     time.sleep(len(audio) / 1000)
@@ -182,6 +196,10 @@ models_combobox.current(0)
 use_custom_path = tk.BooleanVar()
 custom_path_checkbox = tk.Checkbutton(window, text="Play on soundboard", variable=use_custom_path)
 custom_path_checkbox.pack(pady=5)
+
+play_over_speakers = tk.BooleanVar()
+speakers_checkbox = tk.Checkbutton(window, text="Play over speakers", variable=play_over_speakers)
+speakers_checkbox.pack(pady=5)
 
 submit_button = tk.Button(window, text="Download MP3", command=on_submit)
 submit_button.pack(pady=5)
