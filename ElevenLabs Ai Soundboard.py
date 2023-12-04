@@ -13,6 +13,9 @@ import numpy as np
 import pyaudio
 import time
 
+home_dir = os.path.expanduser("~")
+print(home_dir)
+
 def get_user_voices(api_key):
     url = "https://api.elevenlabs.io/v1/voices"
     headers = {"xi-api-key": api_key}
@@ -67,9 +70,9 @@ def download_mp3(api_key, user_input_text, chosen_user_voice_id, chosen_model_id
 
     if response.status_code == 200:
         if use_custom_path:
-            save_path = "C:/Users/s_den/OneDrive/Desktop/Soundboard/output.mp3"
+            save_path = os.path.join(os.environ['USERPROFILE'] if 'USERPROFILE' in os.environ else os.environ['HOME'], "Downloads", "Soundboard", "output.mp3")
         else:
-            save_path = os.path.join(os.path.expanduser("~"), "Downloads",
+            save_path = os.path.join(os.environ['USERPROFILE'] if 'USERPROFILE' in os.environ else os.environ['HOME'], "Downloads",
                                      "output at " + datetime.datetime.now().strftime("%H") + "-" +
                                      datetime.datetime.now().strftime("%M") + "-" +
                                      datetime.datetime.now().strftime("%S") + ".mp3")
@@ -129,7 +132,7 @@ def on_upload():
 
 def play_fixed_mp3():
     # Set the file path
-    file_path = r"C:\Users\USER\OneDrive\Desktop\Soundboard\output.mp3"
+    file_path = os.path.join(os.environ['USERPROFILE'] if 'USERPROFILE' in os.environ else os.environ['HOME'], "Downloads", "Soundboard", "output.mp3")
 
     # Load the MP3 file
     audio = AudioSegment.from_mp3(file_path)
@@ -144,7 +147,7 @@ def play_fixed_mp3():
     time.sleep(len(audio) / 1000)
 
 # Replace 'your_api_key' with your actual API key
-your_api_key = "your_api_key"
+your_api_key = "YOUR_API_KEY"
 
 # Get voices associated with your account
 your_voices = get_user_voices(your_api_key)
