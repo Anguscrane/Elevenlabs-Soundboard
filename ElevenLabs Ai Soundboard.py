@@ -14,9 +14,11 @@ import numpy as np
 import pyaudio
 import time
 import threading
+import glob
+import re
 
 # Replace 'your_api_key' with your actual API key
-your_api_key = "your key here"
+your_api_key = "Your api key"
 
 def get_user_voices(api_key):
     url = "https://api.elevenlabs.io/v1/voices"
@@ -81,14 +83,16 @@ def download_mp3(api_key, user_input_text, chosen_user_voice_id, chosen_model_id
         progress.pack_forget()
 
         if response.status_code == 200:
-                file_path = os.path.join(os.environ['USERPROFILE'] if 'USERPROFILE' in os.environ else os.environ['HOME'], "Downloads", "output.mp3")
-                #save_path = os.path.join(os.environ['USERPROFILE'] if 'USERPROFILE' in os.environ else os.environ['HOME'], "Downloads",
-                                        #"output at " + datetime.datetime.now().strftime("%H") + "-" +
-                                         #datetime.datetime.now().strftime("%M") + "-" +
-                                         #datetime.datetime.now().strftime("%S") + ".mp3")
-
+                # Generate a unique filename using a timestamp and the user's input text
+                timestamp = datetime.datetime.now().strftime("%m-%d-%H-%M")
+                # Remove any characters that are not allowed in filenames
+                safe_user_input_text = re.sub(r'[\\/*?:"<>|]', "", user_input_text)
+                # Limit the length of the user's input text to avoid excessively long filenames
+                safe_user_input_text = safe_user_input_text[:50]
+                file_path = os.path.join(os.environ['USERPROFILE'] if 'USERPROFILE' in os.environ else os.environ['HOME'], "Downloads", f"output_{timestamp}_{safe_user_input_text}.mp3")
                 with open(file_path, 'wb') as f:
                     f.write(response.content)
+
 
                 result_label.config(text="MP3 file downloaded successfully.")
 
@@ -146,11 +150,16 @@ def on_upload():
         ok_button.pack(pady=5)
 
 def play_fixed_mp3(output_device):
-    # Set the file path based on the output_device parameter
-    file_path = os.path.join(os.environ['USERPROFILE'] if 'USERPROFILE' in os.environ else os.environ['HOME'], "Downloads", "output.mp3")
+    # Get the list of all output files
+    downloads_dir = os.path.join(os.environ['USERPROFILE'] if 'USERPROFILE' in os.environ else os.environ['HOME'], "Downloads")
+    output_files = glob.glob(os.path.join(downloads_dir, "output_*.mp3"))
 
+    # Find the most recently created file
+    latest_file = max(output_files, key=os.path.getctime)
+
+    print(latest_file)
     # Load the MP3 file
-    audio = AudioSegment.from_mp3(file_path)
+    audio = AudioSegment.from_mp3(latest_file)
 
     # Convert to numpy array
     samples = np.array(audio.get_array_of_samples())
