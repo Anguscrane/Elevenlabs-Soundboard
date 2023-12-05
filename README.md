@@ -1,39 +1,44 @@
 GitHub Copilot: # Text to Speech Converter
 
-This Python script uses the ElevenLabs API to convert text to speech. It provides a GUI for user interaction, where the user can input text, select a voice, and choose a model for the conversion. The output is an MP3 file that can be played over the speakers or a virtual audio cable.
-Features
+This Python application utilizes the ElevenLabs API to convert text into speech. It provides a user-friendly GUI for interaction, where users can input text, select a voice, and choose a model for the conversion. The output is an MP3 file that can be played over the speakers or a virtual audio cable.
 
-    Text to speech conversion using the ElevenLabs API
-    GUI for user interaction
-    Option to play the output over speakers or a virtual audio cable
-    Option to upload an audio file to create a voice
-    Progress bar to indicate the status of the conversion
+## Features
 
-Dependencies
+- Text to speech conversion using the ElevenLabs API
+- GUI for user interaction
+- Option to play the output over speakers or a virtual audio cable
+- Option to upload an audio file to create a new voice
+- Progress bar to indicate the status of the conversion
 
-This script requires the following Python libraries:
+## Dependencies
 
-    requests
-    pydub
-    tkinter
-    sounddevice
-    numpy
-    pyaudio
-    threading
-    glob
-    re
+This application requires the following Python libraries:
+
+- requests
+- pydub
+- tkinter
+- sounddevice
+- numpy
+- pyaudio
+- threading
+- glob
+- re
+
 You can install these dependencies using pip:
+
+```bash
 pip install requests pydub tkinter sounddevice numpy pyaudio
- 
-Usage
+```
 
-    Replace 'your_api_key' with your actual ElevenLabs API key.
-    Run the script. A GUI will appear.
-    Enter the text you want to convert to speech.
-    Choose a voice and a model for the conversion.
-    Click the "Download MP3" button to start the conversion. The output will be saved as an MP3 file in your Downloads folder.
-    You can also upload a voice by clicking the "Upload Voice" button and selecting the audio files.
+## Usage
 
-Note
+1. Replace 'your_api_key' with your actual ElevenLabs API key.
+2. Run the script. A GUI will appear.
+3. Enter the text you want to convert to speech.
+4. Choose a voice and a model for the conversion.
+5. Click the "Download MP3" button to start the conversion. The output will be saved as an MP3 file in your Downloads folder.
+6. You can also upload a voice by clicking the "Upload Voice" button and selecting the audio files.
 
-This script is designed to work with the ElevenLabs API. You need to have an API key from ElevenLabs to use this script.
+## Note
+
+This application is designed to work with the ElevenLabs API. You need to have an API key from ElevenLabs to use this application.
