@@ -1,4 +1,21 @@
+import pkg_resources
+import subprocess
+import sys
+def install(package):
+    try:
+        dist = pkg_resources.get_distribution(package)
+        print("{} ({}) is installed".format(dist.key, dist.version))
+    except pkg_resources.DistributionNotFound:
+        print("{} is NOT installed".format(package))
+        subprocess.call([sys.executable, "-m", "pip", "install", package])
 
+
+# List of packages to check
+packages = ["requests", "pydub", "numpy", "pyaudio", "sounddevice"]
+
+# Check each package
+for package in packages:
+    install(package)
 import requests
 from pydub import AudioSegment
 import io
@@ -18,7 +35,8 @@ import glob
 import re
 
 # Replace 'your_api_key' with your actual API key
-your_api_key = "Your api key"
+your_api_key = "YOUR API HERE"
+
 
 def get_user_voices(api_key):
     url = "https://api.elevenlabs.io/v1/voices"
@@ -26,24 +44,25 @@ def get_user_voices(api_key):
     response = requests.get(url, headers=headers)
     return response.json()["voices"]
 
+
 def get_models(api_key):
     url = "https://api.elevenlabs.io/v1/models"
     headers = {"xi-api-key": api_key}
     response = requests.get(url, headers=headers)
     return response.json()
 
+
 def add_voice(api_key, name, description, labels, audio_files):
     url = "https://api.elevenlabs.io/v1/voices/add"
 
     headers = {"xi-api-key": api_key}
 
-    data = {
-        "name": name,
-        "description": description,
-        "labels": labels
-    }
+    data = {"name": name, "description": description, "labels": labels}
 
-    files = [("files", (audio_file.split("/")[-1], open(audio_file, "rb"))) for audio_file in audio_files]
+    files = [
+        ("files", (audio_file.split("/")[-1], open(audio_file, "rb")))
+        for audio_file in audio_files
+    ]
 
     response = requests.post(url, data=data, files=files, headers=headers)
 
@@ -53,22 +72,21 @@ def add_voice(api_key, name, description, labels, audio_files):
         return None
 
 
-def download_mp3(api_key, user_input_text, chosen_user_voice_id, chosen_model_id, result_label):
+def download_mp3(
+    api_key, user_input_text, chosen_user_voice_id, chosen_model_id, result_label
+):
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{chosen_user_voice_id}"
 
     headers = {
         "Accept": "audio/mpeg",
         "Content-Type": "application/json",
-        "xi-api-key": api_key
+        "xi-api-key": api_key,
     }
 
     data = {
         "text": user_input_text,
         "model_id": chosen_model_id,
-        "voice_settings": {
-            "stability": 0.5,
-            "similarity_boost": 0.5
-        }
+        "voice_settings": {"stability": 0.5, "similarity_boost": 0.5},
     }
 
     # Make the progress bar visible and start it
@@ -83,19 +101,26 @@ def download_mp3(api_key, user_input_text, chosen_user_voice_id, chosen_model_id
         progress.pack_forget()
 
         if response.status_code == 200:
-                # Generate a unique filename using a timestamp and the user's input text
-                timestamp = datetime.datetime.now().strftime("%m-%d-%H-%M")
-                # Remove any characters that are not allowed in filenames
-                safe_user_input_text = re.sub(r'[\\/*?:"<>|]', "", user_input_text)
-                # Limit the length of the user's input text to avoid excessively long filenames
-                safe_user_input_text = safe_user_input_text[:50]
-                file_path = os.path.join(os.environ['USERPROFILE'] if 'USERPROFILE' in os.environ else os.environ['HOME'], "Downloads", f"output_{timestamp}_{safe_user_input_text}.mp3")
-                with open(file_path, 'wb') as f:
-                    f.write(response.content)
+            # Generate a unique filename using a timestamp and the user's input text
+            timestamp = datetime.datetime.now().strftime("%m-%d-%H-%M")
+            # Remove any characters that are not allowed in filenames
+            safe_user_input_text = re.sub(r'[\\/*?:"<>|]', "", user_input_text)
+            # Limit the length of the user's input text to avoid excessively long filenames
+            safe_user_input_text = safe_user_input_text[:50]
+            file_path = os.path.join(
+                os.environ["USERPROFILE"]
+                if "USERPROFILE" in os.environ
+                else os.environ["HOME"],
+                "Downloads",
+                f"output_{timestamp}_{safe_user_input_text}.mp3",
+            )
+            with open(file_path, "wb") as f:
+                f.write(response.content)
 
+            result_label.config(text="MP3 file downloaded successfully.")
+            print(f"Output at: {file_path}")
 
-                result_label.config(text="MP3 file downloaded successfully.")
-
+            
         # Check what to play over
         if play_over_microphone.get() & play_over_speakers.get():
             play_fixed_mp3("BOTH")
@@ -108,12 +133,24 @@ def download_mp3(api_key, user_input_text, chosen_user_voice_id, chosen_model_id
 
     # Run the request in a separate thread
     threading.Thread(target=request).start()
+
+
 def on_submit():
     # Get the user input text
-    user_input_text = text_entry.get('1.0', 'end').strip()
-    chosen_user_voice_id = your_voices[voices_combobox.current()]['voice_id']
+    user_input_text = text_entry.get("1.0", "end").strip()
+    chosen_user_voice_id = your_voices[voices_combobox.current()]["voice_id"]
     chosen_model_id = available_models[models_combobox.current()]["model_id"]
-    download_mp3(your_api_key, user_input_text, chosen_user_voice_id, chosen_model_id, result_label)
+    download_mp3(your_api_key, user_input_text, chosen_user_voice_id, chosen_model_id, result_label,)
+    
+    # Get the chosen model and voice names
+    chosen_model_name = available_models[models_combobox.current()]["name"]
+    chosen_voice_name = your_voices[voices_combobox.current()]["name"]
+    
+    # Print the model, voice, and text to the console
+    print(f"Model: {chosen_model_name}")
+    print(f"Voice: {chosen_voice_name}")
+    print(f"Text: {user_input_text}")
+
 
 def on_upload():
     file_paths = filedialog.askopenfilenames(
@@ -149,9 +186,15 @@ def on_upload():
         ok_button = tk.Button(input_window, text="OK", command=on_ok)
         ok_button.pack(pady=5)
 
+
 def play_fixed_mp3(output_device):
     # Get the list of all output files
-    downloads_dir = os.path.join(os.environ['USERPROFILE'] if 'USERPROFILE' in os.environ else os.environ['HOME'], "Downloads")
+    downloads_dir = os.path.join(
+        os.environ["USERPROFILE"]
+        if "USERPROFILE" in os.environ
+        else os.environ["HOME"],
+        "Downloads",
+    )
     output_files = glob.glob(os.path.join(downloads_dir, "output_*.mp3"))
 
     # Find the most recently created file
@@ -167,7 +210,12 @@ def play_fixed_mp3(output_device):
     # Set the device based on the output_device parameter
     if output_device == "BOTH":
         # Play the audio over both the CABLE input and the default speakers
-        sd.play(samples, samplerate=44100, device="CABLE Input (VB-Audio Virtual Cable),  Windows DirectSound", blocking=False)
+        sd.play(
+            samples,
+            samplerate=44100,
+            device="CABLE Input (VB-Audio Virtual Cable),  Windows DirectSound",
+            blocking=False,
+        )
         sd.play(samples, samplerate=44100, device=sd.default.device, blocking=False)
     elif output_device == "CABLE":
         device = "CABLE Input (VB-Audio Virtual Cable),  Windows DirectSound"
@@ -179,26 +227,32 @@ def play_fixed_mp3(output_device):
     # Wait for the playback to finish (adjust the sleep duration as needed)
     time.sleep(len(audio) / 1000)
 
+
 # Function to refresh the voices and models
 def refresh():
     global your_voices, voice_options, available_models, model_options
     your_voices = get_user_voices(your_api_key)
-    voice_options = [voice['name'] for voice in your_voices]
-    voices_combobox['values'] = voice_options
+    voice_options = [voice["name"] for voice in your_voices]
+    voices_combobox["values"] = voice_options
     voices_combobox.current(0)
 
     available_models = get_models(your_api_key)
-    model_options = [f"{model['name']} - {model['description']}" for model in available_models]
-    models_combobox['values'] = model_options
+    model_options = [
+        f"{model['name']} - {model['description']}" for model in available_models
+    ]
+    models_combobox["values"] = model_options
     models_combobox.current(0)
+
 
 # Get voices associated with your account
 your_voices = get_user_voices(your_api_key)
-voice_options = [voice['name'] for voice in your_voices]
+voice_options = [voice["name"] for voice in your_voices]
 
 # Get available models
 available_models = get_models(your_api_key)
-model_options = [f"{model['name']} - {model['description']}" for model in available_models]
+model_options = [
+    f"{model['name']} - {model['description']}" for model in available_models
+]
 
 # Create the main window
 window = tk.Tk()
@@ -211,23 +265,31 @@ text_entry.pack(pady=5, expand=True, fill=tk.BOTH)
 
 tk.Label(window, text="Choose a voice:").pack(pady=5)
 max_voice_option_length = max(len(option) for option in voice_options)
-voices_combobox = ttk.Combobox(window, values=voice_options, state="readonly", width=max_voice_option_length)
+voices_combobox = ttk.Combobox(
+    window, values=voice_options, state="readonly", width=max_voice_option_length
+)
 voices_combobox.pack(pady=5)
 voices_combobox.current(0)
 
 tk.Label(window, text="Choose a model:").pack(pady=5)
 max_model_option_length = max(len(option) for option in model_options)
-models_combobox = ttk.Combobox(window, values=model_options, state="readonly", width=max_model_option_length)
+models_combobox = ttk.Combobox(
+    window, values=model_options, state="readonly", width=max_model_option_length
+)
 models_combobox.pack(pady=5)
 models_combobox.current(0)
 
 # Add a Checkbutton for custom save path
 play_over_microphone = tk.BooleanVar()
-custom_path_checkbox = tk.Checkbutton(window, text="Play over microphone", variable=play_over_microphone)
+custom_path_checkbox = tk.Checkbutton(
+    window, text="Play over microphone", variable=play_over_microphone
+)
 custom_path_checkbox.pack(pady=5)
 
 play_over_speakers = tk.BooleanVar()
-speakers_checkbox = tk.Checkbutton(window, text="Play over speakers", variable=play_over_speakers)
+speakers_checkbox = tk.Checkbutton(
+    window, text="Play over speakers", variable=play_over_speakers
+)
 speakers_checkbox.pack(pady=5)
 
 submit_button = tk.Button(window, text="Download MP3", command=on_submit)
@@ -244,7 +306,7 @@ refresh_button = tk.Button(window, text="Refresh", command=refresh)
 refresh_button.pack(pady=5)
 
 # Add a Progress bar
-progress = ttk.Progressbar(window, length=200, mode='indeterminate')
+progress = ttk.Progressbar(window, length=200, mode="indeterminate")
 progress.pack(pady=5)
 
 # Hide the progress bar initially
