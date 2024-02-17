@@ -245,6 +245,19 @@ def refresh():
     models_combobox["values"] = model_options
     models_combobox.current(0)
 
+def insert_break():
+    # Function to insert a break with specified duration at the end of the text
+    break_duration = break_duration_entry.get()
+    break_tag = f"<break time=\"{break_duration}\" />"
+    current_text = text_entry.get("1.0", "end").strip()
+
+    # Insert the break tag at the end of the text
+    updated_text = current_text + " " + break_tag
+    text_entry.delete("1.0", tk.END)
+    text_entry.insert(tk.END, updated_text)
+
+    # Give focus back to the text entry
+    text_entry.focus_set()
 
 # Get voices associated with your account
 your_voices = get_user_voices(your_api_key)
@@ -259,6 +272,18 @@ model_options = [
 # Create the main window
 window = tk.Tk()
 window.title("Text to Speech Converter")
+
+# Add a label and entry for break duration
+break_duration_label = tk.Label(text="Break Duration (e.g., 0.25s):")
+break_duration_label.pack(pady=5)
+
+break_duration_entry = tk.Entry(width=10)
+break_duration_entry.insert(tk.END, "0.25s")  # Default break duration
+break_duration_entry.pack(pady=5)
+
+# Add a button to insert a break with specified duration
+insert_break_button = tk.Button(text="Insert Break", command=insert_break)
+insert_break_button.pack(pady=5)
 
 # Create and place widgets
 tk.Label(window, text="Enter the text you want to convert:").pack(pady=5)
