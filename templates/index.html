@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ElevenLabs Soundboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>ElevenLabs Soundboard</h1>
+        <form id="text-to-speech-form">
+            <div class="form-group">
+                <label for="text">Enter the text you want to convert:</label>
+                <textarea id="text" name="text" rows="4" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="voice">Choose a voice:</label>
+                <select id="voice" name="voice_id" required></select>
+            </div>
+            <div class="form-group">
+                <label for="model">Choose a model:</label>
+                <select id="model" name="model_id" required></select>
+            </div>
+            <div class="form-group">
+                <label for="break-duration">Break Duration (e.g., 0.25s):</label>
+                <input type="text" id="break-duration" name="break_duration" value="0.25s" required>
+                <button type="button" id="insert-break">Insert Break</button>
+            </div>
+            <div class="form-group">
+                <button type="submit">Convert to Speech</button>
+            </div>
+        </form>
+        <div class="form-group">
+            <button id="upload-voice">Upload Voice</button>
+            <button id="refresh">Refresh Voices and Models</button>
+        </div>
+        <div class="form-group">
+            <progress id="progress-bar" value="0" max="100" style="display: none;"></progress>
+            <label id="result-label"></label>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('text-to-speech-form');
+            const progressBar = document.getElementById('progress-bar');
+            const resultLabel = document.getElementById('result-label');
+            const voiceSelect = document.getElementById('voice');
+            const modelSelect = document.getElementById('model');
+            const insertBreakButton = document.getElementById('insert-break');
+            const textArea = document.getElementById('text');
+            const breakDurationInput = document.getElementById('break-duration');
+
+            function fetchVoicesAndModels() {
+                fetch('/api/voices')
+                    .then(response => response.json())
+                    .then(voices => {
+                        voiceSelect.innerHTML = '';
+                        voices.forEach(voice => {
+                            const option = document.createElement('option');
+                            option.value = voice.voice_id;
+                            option.textContent = voice.name;
+                            voiceSelect.appendChild(option);
+                        });
+                    });
+
+                fetch('/api/models')
+                    .then(response => response.json())
+                    .then(models => {
+                        modelSelect.innerHTML = '';
+                        models.forEach(model => {
+                            const option = document.createElement('option');
+                            option.value = model.model_id;
+                            option.textContent = model.name;
+                            modelSelect.appendChild(option);
+                        });
+                    });
+            }
+
+            form.addEventListener('submit', function(event) {
+                event.preventDefault();
+                const formData = new FormData(form);
+                progressBar.style.display = 'block';
+                progressBar.value = 0;
+                resultLabel.textContent = '';
+
+                fetch('/api/convert', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    progressBar.style.display = 'none';
+                    if (data.file_path) {
+                        resultLabel.textContent = 'MP3 file downloaded successfully.';
+                    } else {
+                        resultLabel.textContent = 'Error converting text to speech.';
+                    }
+                });
+            });
+
+            insertBreakButton.addEventListener('click', function() {
+                const breakDuration = breakDurationInput.value;
+                const breakTag = `<break time="${breakDuration}" />`;
+                textArea.value += ' ' + breakTag;
+            });
+
+            document.getElementById('upload-voice').addEventListener('click', function() {
+                const uploadForm = new FormData();
+                const audioFiles = document.createElement('input');
+                audioFiles.type = 'file';
+                audioFiles.multiple = true;
+                audioFiles.accept = 'audio/*';
+                audioFiles.addEventListener('change', function() {
+                    for (let i = 0; i < audioFiles.files.length; i++) {
+                        uploadForm.append('audio_files', audioFiles.files[i]);
+                    }
+                    const name = prompt('Enter a name for the voice:');
+                    const description = 'Voice created from uploaded file';
+                    const labels = '';
+                    uploadForm.append('name', name);
+                    uploadForm.append('description', description);
+                    uploadForm.append('labels', labels);
+
+                    fetch('/api/add_voice', {
+                        method: 'POST',
+                        body: uploadForm
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.voice_id) {
+                            resultLabel.textContent = `Voice '${name}' created successfully.`;
+                            fetchVoicesAndModels();
+                        } else {
+                            resultLabel.textContent = 'Error creating voice.';
+                        }
+                    });
+                });
+                audioFiles.click();
+            });
+
+            document.getElementById('refresh').addEventListener('click', fetchVoicesAndModels);
+
+            fetchVoicesAndModels();
+        });
+    </script>
+</body>
+</html>
